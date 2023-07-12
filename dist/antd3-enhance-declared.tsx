@@ -1621,12 +1621,38 @@ class ActivityStepTwo extends Component {
 const func = (props, changedValues, allValues) => {
   console.log('props', props);
 };
-const WrappedActivityStepTwo = function () {
-  function func(props, changedValues) {
+const WrappedActivityStepTwo = Form.create({
+  onValuesChange: function func_watchForm(props, changedValues) {
     window.WATCH_FORM_DATA_EXTENTIONS = allValues;
-    return func(...arguments);
+    func(...arguments);
+  },
+  onFieldsChange(props, fields) {
+    // console.log('onFieldsChange', fields);
+    const {
+      interactiveDetail
+    } = props;
+    const keys = Object.keys(fields);
+    const ignoreKeys = ['insideHeadPic', 'insideButtonPic', 'insideIconPic', 'appletIconPic', 'outsideButtonPic', 'outsideHeadPic', 'outsidePrizeOldHeadPic', 'outsidePrizeOldButtonPic', 'outsidePrizeOldIsShareButtonPic', 'outsidePrizeNewHeadPic', 'outsidePrizeNewButtonPic', 'endHeadPic', 'endButtonPic', 'carIconPic', 'appWaitIconPic', 'appWaitIconPicOfMessage', 'miniProgramWaitIconPic', 'outsidePrizeEndButtonPic', 'outsidePrizeEndHeadPic', 'outsideButtonWithoutPhonePic', 'evaluationDialogPic', 'travelingRedBagIconPic', 'evaluationBannerPic'];
+    for (let i = 0, l = keys.length; i < l; i += 1) {
+      const key = keys[i];
+      const {
+        name
+      } = fields[key];
+      const {
+        value
+      } = fields[key];
+      if (ignoreKeys.includes(key)) {
+        break;
+      }
+      if (_.eq(interactiveDetail[key], value)) {
+        break;
+      }
+      props.dispatch('UPDATE_CUSTOMER_INTERACTIVE_DETAIL', {
+        [name]: value
+      });
+    }
   }
-}()(ActivityStepTwo);
+})(ActivityStepTwo);
 export default connect(state => ({
   detail: state.customerReducer.customerActivityReducer.detail,
   redBagCarDetail: state.customerReducer.customerActivityReducer.redBagCarDetail,

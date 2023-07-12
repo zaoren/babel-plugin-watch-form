@@ -73,7 +73,7 @@ module.exports = function ({ types }) {
                       types.isObjectProperty(property) &&
                       types.isIdentifier(property.key, { name: 'onValuesChange' })
                     ) {
-                      return property.value;
+                      return property;
                     } else {
                       return false
                     }
@@ -82,8 +82,9 @@ module.exports = function ({ types }) {
                   return false;
                 }
               }
+              const onValuesChangeProperty = getOnValuesChangeValue(options);
               // onValuesChange
-              const value = getOnValuesChangeValue(options);
+              const value = onValuesChangeProperty && onValuesChangeProperty.value;
               // 如果已经声明了 onValuesChange 函数
               if (value) {
                 // 需要兼容3种写法:
@@ -99,14 +100,13 @@ module.exports = function ({ types }) {
                 // 3. onValuesChange: onValuesChangeFunc 这三种写法
                   // 对于函数变量写法，替换函数节点为新的函数节点，并插入代码
                   const code = `
-                    function ${value.name}(props, changedValues) {
+                    function ${value.name}_watchForm(props, changedValues) {
                       window.WATCH_FORM_DATA_EXTENTIONS = allValues;
-                      ${value.name}(...arguments);
+                      ${value.name}(...Array.from(arguments));
                     }
                   `;
                   const ast = parser.parse(code);
-                  // const replaceAST = template.expression(code)();
-                  path.replaceWith(ast.program.body[0]);
+                  onValuesChangeProperty.value = ast.program.body[0];
                 }
               } else {
 
