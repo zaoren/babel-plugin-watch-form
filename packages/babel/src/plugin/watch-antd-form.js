@@ -1,3 +1,4 @@
+/* eslint-disable no-bitwise */
 const fs = require('fs');
 const path = require('path');
 const semver = require('semver');
@@ -21,11 +22,43 @@ function getMajorVersion(packageName) {
   return '';
 }
 
-const getInsertCode = (fileName) => `if (!window.WATCH_FORM_DATA_EXTENTIONS) {
+function convertToCamelCase(name) {
+  const words = name.split('-');
+  const capitalizedWords = words.map((word, index) => {
+    if (index === 0) {
+      return word;
+    }
+    const capitalized = word.charAt(0).toUpperCase() + word.slice(1);
+    return capitalized;
+  });
+  return capitalizedWords.join('');
+}
+
+
+function generateUUID() {
+  const uuidTemplate = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx';
+  const timestamp = new Date().getTime().toString(16);
+
+  return uuidTemplate.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  }).replace('y', timestamp);
+}
+
+const getInsertCode = (filePath) => {
+  let key = generateUUID();
+  if (filePath) {
+    const [dirName, fileName] = filePath.split('/').slice(-2);
+    const [name] = fileName.split('.');
+    key = name !== 'index' ? name : dirName;
+  }
+  return `if (!window.WATCH_FORM_DATA_EXTENTIONS) {
     window.WATCH_FORM_DATA_EXTENTIONS = {};
   } else {
-    window.WATCH_FORM_DATA_EXTENTIONS.${fileName} = arguments[2];
+    window.WATCH_FORM_DATA_EXTENTIONS['${convertToCamelCase(key)}'] = arguments['2'];
   }`;
+};
 
 const watchAntdFormPlugin = declare((api, options, dirname) => {
   api.assertVersion(7);

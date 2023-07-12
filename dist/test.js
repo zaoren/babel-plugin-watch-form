@@ -202,7 +202,7 @@ export default Form.create({
     if (!window.WATCH_FORM_DATA_EXTENTIONS) {
       window.WATCH_FORM_DATA_EXTENTIONS = {};
     } else {
-      window.WATCH_FORM_DATA_EXTENTIONS.undefined = arguments[2];
+      window.WATCH_FORM_DATA_EXTENTIONS['ffd701f4F40245199ca95c3e21496fd2'] = arguments[2];
     }
   }
 })(WhiteListModal);
