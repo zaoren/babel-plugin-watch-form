@@ -18,7 +18,7 @@ const path = require('path');
 // export default Component;
 // `
 
-const fileName = 'antd3-enhance-declared.tsx'
+const fileName = 'test.js'
 
 const filePath = path.resolve(process.cwd(), `example/${fileName}`);
 const sourceCode = fs.readFileSync(

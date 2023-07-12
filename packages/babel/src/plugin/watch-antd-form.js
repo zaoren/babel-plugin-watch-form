@@ -2,12 +2,13 @@ const fs = require('fs');
 const path = require('path');
 const semver = require('semver');
 const { createRequire } = require('module');
-const  parser = require('@babel/parser');
-const template = require('@babel/template').default;
+const parser = require('@babel/parser');
+const { declare } = require('@babel/helper-plugin-utils');
+const types = require('@babel/types');
 
 // 获取某个包的主版本
 function getMajorVersion(packageName) {
-  const requirePath = nodePath.resolve(process.cwd(), 'package.json');
+  const requirePath = path.resolve(process.cwd(), 'package.json');
   const requireFn = createRequire(requirePath);
   const packageJson = requireFn(requirePath);
   const version = packageJson.dependencies[packageName];
@@ -20,8 +21,15 @@ function getMajorVersion(packageName) {
   return '';
 }
 
-const nodePath = path;
-module.exports = function ({ types }) {
+const getInsertCode = (fileName) => `if (!window.WATCH_FORM_DATA_EXTENTIONS) {
+    window.WATCH_FORM_DATA_EXTENTIONS = {};
+  } else {
+    window.WATCH_FORM_DATA_EXTENTIONS.${fileName} = arguments[2];
+  }`;
+
+const watchAntdFormPlugin = declare((api, options, dirname) => {
+  api.assertVersion(7);
+
   return {
     visitor: {
       Program: {
@@ -50,7 +58,7 @@ module.exports = function ({ types }) {
               }
             },
           });
-        }
+        },
       },
       CallExpression(path, state) {
         // Form.create
@@ -66,53 +74,61 @@ module.exports = function ({ types }) {
               const getOnValuesChangeValue = (options) => {
                 if (!options) {
                   return false;
-                } else if (types.isObjectExpression(options)) {
-                  const properties = options.properties;
+                } if (types.isObjectExpression(options)) {
+                  const { properties } = options;
                   for (const property of properties) {
-                    if (
-                      types.isObjectProperty(property) &&
-                      types.isIdentifier(property.key, { name: 'onValuesChange' })
+                    if ((types.isObjectProperty(property) || types.isObjectMethod(property))
+                      && types.isIdentifier(property.key, { name: 'onValuesChange' })
                     ) {
                       return property;
-                    } else {
-                      return false
                     }
+                    return false;
                   }
                 } else {
                   return false;
                 }
-              }
+              };
               const onValuesChangeProperty = getOnValuesChangeValue(options);
+              let value = '';
+              // 这里需要处理一下，箭头函数的写法和
+              if (types.isObjectMethod(onValuesChangeProperty)) {
+                value = onValuesChangeProperty.body;
+              } else if (types.isObjectProperty(onValuesChangeProperty)) {
+                value = onValuesChangeProperty.value;
+              }
               // onValuesChange
-              const value = onValuesChangeProperty && onValuesChangeProperty.value;
               // 如果已经声明了 onValuesChange 函数
               if (value) {
                 // 需要兼容3种写法:
-                // 1.onValuesChange: () => {}; 
-                if ( types.isArrowFunctionExpression(value)) {
-                  const inserAST = template.expression(`window.WATCH_FORM_DATA_EXTENTIONS.a = allValues;`)();
-                  value.body.body.unshift(inserAST);
-                } else if (types.isFunctionExpression(value)) {
-                // 2.onValuesChange {}
-                  const inserAST = template.expression(`window.WATCH_FORM_DATA_EXTENTIONS.a = allValues;`)();
-                  value.body.body.unshift(inserAST);
+                // 1.onValuesChange: () => {};
+                if (types.isArrowFunctionExpression(value)) {
+                  // 这个时候需要有一个标识名来标识Form
+                  const ast = parser.parse(getInsertCode(state.file.opts.filename));
+                  if (types.isBlockStatement(value.body)) { // 有函数体就在开始插入埋点代码
+                    value.body.body.unshift(ast.program.body[0]);
+                  }
+                } else if (types.isBlockStatement(value)) {
+                  // 2. onValuesChange() {}
+                  const ast = parser.parse(
+                    getInsertCode(state.file.opts.filename), // TODO 这里之后改成读 state.file.opts.filename
+                  );
+                  if (types.isBlockStatement(value)) { // 有函数体就在开始插入埋点代码
+                    value.body.unshift(ast.program.body[0]);
+                  }
                 } else if (types.isIdentifier(value)) {
-                // 3. onValuesChange: onValuesChangeFunc 这三种写法
+                  // 3. onValuesChange: onValuesChangeFunc 这三种写法
                   // 对于函数变量写法，替换函数节点为新的函数节点，并插入代码
                   const code = `
                     function ${value.name}_watchForm(props, changedValues) {
-                      window.WATCH_FORM_DATA_EXTENTIONS = allValues;
+                      ${getInsertCode(state.file.opts.filename)}
                       ${value.name}(...Array.from(arguments));
                     }
                   `;
                   const ast = parser.parse(code);
                   onValuesChangeProperty.value = ast.program.body[0];
                 }
-              } else {
-
               }
 
-              const parentFunction = path.getFunctionParent();
               // const params = parentFunction.node.params;
 
               // 在 onValuesChange 事件处理函数中插入代码
@@ -126,14 +142,19 @@ module.exports = function ({ types }) {
               //   // 在 onValuesChange 函数体的开头插入代码
               //   parentFunction.get('body').unshiftContainer('body', ast.program.body[0]);
             }
+            break;
           case 4: {
-
+            break;
           }
           case 5: {
-
+            break;
           }
+          default:
+            break;
         }
-      }
-    }
+      },
+    },
   };
-};
+});
+
+module.exports = watchAntdFormPlugin;

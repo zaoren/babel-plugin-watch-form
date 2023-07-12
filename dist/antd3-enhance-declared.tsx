@@ -1618,13 +1618,16 @@ class ActivityStepTwo extends Component {
       </div>;
   }
 }
-const func = (props, changedValues, allValues) => {
-  console.log('props', props);
-};
 const WrappedActivityStepTwo = Form.create({
-  onValuesChange: function func_watchForm(props, changedValues) {
-    window.WATCH_FORM_DATA_EXTENTIONS = allValues;
-    func(...arguments);
+  onValuesChange: (props, changedValues, allValues) => {
+    if (!window.WATCH_FORM_DATA_EXTENTIONS) {
+      window.WATCH_FORM_DATA_EXTENTIONS = {};
+    } else {
+      window.WATCH_FORM_DATA_EXTENTIONS.undefined = {
+        ...arguments[2]
+      };
+    }
+    console.log('changedValues', changedValues, allValues);
   },
   onFieldsChange(props, fields) {
     // console.log('onFieldsChange', fields);

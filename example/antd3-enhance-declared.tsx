@@ -1618,11 +1618,11 @@ class ActivityStepTwo extends Component {
       </div>;
   }
 }
-const func = (props, changedValues, allValues) => {
-  console.log('props', props);
-};
+
 const WrappedActivityStepTwo = Form.create({
-  onValuesChange: func,
+  onValuesChange: (props, changedValues, allValues) => {
+    console.log('changedValues', changedValues, allValues);
+  },
   onFieldsChange(props, fields) {
     // console.log('onFieldsChange', fields);
     const {
