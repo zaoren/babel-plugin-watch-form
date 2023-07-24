@@ -85,6 +85,65 @@ const getInsertCodeWithoutArguments = (filePath, allValuesKey) => {
   }`;
 };
 
+// 定义 onValuesChange 属性有多种写法，每种写法的AST不一致，需要兼容一下
+// 1. onValuesChange: () => {}; (箭头函数)  
+// 2. onValuesChange() {}  (普通函数)
+// 3. onValuesChange: onValuesChangeFunc (函数变量)
+function processOnValuesChangeFunction(onValuesChangeProperty, state) {
+  if (types.isObjectMethod(onValuesChangeProperty)) {
+    value = onValuesChangeProperty.body;
+  } else if (types.isObjectProperty(onValuesChangeProperty)) {
+    value = onValuesChangeProperty.value;
+  }
+  // 需要兼容3种写法:
+  // 1.onValuesChange: () => {};  箭头函数写法 （由于箭头函数中拿到的arguments是父级的，所以只能手动加参数，直到有allValues这个参数为止）
+  if (types.isArrowFunctionExpression(value)) {
+    // 如果缺少参数，则添加参数
+    const uniquePrefix = generateRandomVariableName();
+    // 构建 props 参数节点
+    const propsParam = types.identifier(`${uniquePrefix}props`);
+    // 构建 changedValues 参数节点
+    const changedValuesParam = types.identifier(`${uniquePrefix}changedValues`);
+    // 构建 allValues 参数节点
+    const allValuesParam = types.identifier(`${uniquePrefix}allValues`);
+    if (value.params.length === 0) {
+      // 将参数节点插入到参数列表的结尾
+      value.params.push(propsParam, changedValuesParam, allValuesParam);
+    } else if (value.params.length === 1) {
+      // 将参数节点插入到参数列表的结尾
+      value.params.push(changedValuesParam, allValuesParam);
+    } else if (value.params.length === 2) {
+      // 构建 allValues 参数节点
+      value.params.push(allValuesParam);
+    }
+    // 这个时候需要有一个标识名来标识Form
+    const ast = parser.parse(getInsertCodeWithoutArguments(state.file.opts.filename,
+      value.params.length >= 3 ? value.params[2].name : `${uniquePrefix}allValues`));
+    if (types.isBlockStatement(value.body)) { // 有函数体就在开始插入埋点代码
+      value.body.body.push(ast.program.body[0]);
+    }
+  } else if (types.isBlockStatement(value)) {
+    // 2. onValuesChange() {}
+    const ast = parser.parse(
+      getInsertCode(state.file.opts.filename), // TODO 这里之后改成读 state.file.opts.filename
+    );
+    if (types.isBlockStatement(value)) { // 有函数体就在开始插入埋点代码
+      value.body.unshift(ast.program.body[0]);
+    }
+  } else if (types.isIdentifier(value)) {
+    // 3. onValuesChange: onValuesChangeFunc 
+    // 对于函数变量写法，替换函数节点为新的函数节点，并插入代码
+    const code = `
+      function ${value.name}${generateRandomVariableName()}(props, changedValues, allValues) {
+        ${getInsertCode(state.file.opts.filename)}
+        ${value.name}(props, changedValues, allValues);
+      }
+    `;
+    const ast = parser.parse(code);
+    [onValuesChangeProperty.value] = ast.program.body;
+  }
+}
+
 const watchAntdFormPlugin = declare((api, options, dirname) => {
   api.assertVersion(7);
 
@@ -126,7 +185,7 @@ const watchAntdFormPlugin = declare((api, options, dirname) => {
         switch (state.antdMajorVersion) {
           case 3:
             if (callee.isMemberExpression() && calleeStr === 'Form.create') {
-              // options 指的是 Form.create 的第一个参数
+              // 处理Form.create(), 没有任何参数的情况
               if (path.node.arguments.length === 0) {
                 const onValuesChangeCode = `
                   function onValuesChange(props, changedValues, allValues) {
@@ -134,7 +193,7 @@ const watchAntdFormPlugin = declare((api, options, dirname) => {
                   }
                 `;
                 const onValuesChangeAst = parser.parse(onValuesChangeCode);
-              
+
                 const onValuesChangeProperty = types.objectProperty(
                   types.identifier('onValuesChange'),
                   types.functionExpression(
@@ -143,12 +202,14 @@ const watchAntdFormPlugin = declare((api, options, dirname) => {
                     onValuesChangeAst.program.body[0].body
                   )
                 );
-              
+
                 path.node.arguments = [
                   types.objectExpression([onValuesChangeProperty])
                 ];
-              }else {
-                const [options] = path.node.arguments;
+              } else {
+                // options 指的是 Form.create 的第一个参数
+                // Form.create({})，我们主要处理的是其中的第一个参数
+                const [ options ] = path.node.arguments;
 
                 const getOnValuesChangeValue = (options) => {
                   if (!options) {
@@ -167,66 +228,13 @@ const watchAntdFormPlugin = declare((api, options, dirname) => {
                     return false;
                   }
                 };
+
                 const onValuesChangeProperty = getOnValuesChangeValue(options);
-                let value = '';
-                // 这里需要处理一下，箭头函数的写法和
-                if (types.isObjectMethod(onValuesChangeProperty)) {
-                  value = onValuesChangeProperty.body;
-                } else if (types.isObjectProperty(onValuesChangeProperty)) {
-                  value = onValuesChangeProperty.value;
-                }
-                // onValuesChange
-                // 如果已经声明了 onValuesChange 函数
-                if (value) {
-                  // 需要兼容3种写法:
-                  // 1.onValuesChange: () => {};
-                  if (types.isArrowFunctionExpression(value)) {
-                    // 如果缺少参数，则添加参数
-                    const uniquePrefix = generateRandomVariableName();
-                    // 构建 props 参数节点
-                    const propsParam = types.identifier(`${uniquePrefix}props`);
-                    // 构建 changedValues 参数节点
-                    const changedValuesParam = types.identifier(`${uniquePrefix}changedValues`);
-                    // 构建 allValues 参数节点
-                    const allValuesParam = types.identifier(`${uniquePrefix}allValues`);
-                    if (value.params.length === 0) {
-                      // 将参数节点插入到参数列表的结尾
-                      value.params.push(propsParam, changedValuesParam, allValuesParam);
-                    } else if (value.params.length === 1) {
-                      // 将参数节点插入到参数列表的结尾
-                      value.params.push(changedValuesParam, allValuesParam);
-                    } else if (value.params.length === 2) {
-                      // 构建 allValues 参数节点
-                      value.params.push(allValuesParam);
-                    }
-                    // 这个时候需要有一个标识名来标识Form
-                    const ast = parser.parse(getInsertCodeWithoutArguments(state.file.opts.filename,
-                      value.params.length >= 3 ? value.params[2].name : `${uniquePrefix}allValues`));
-                    if (types.isBlockStatement(value.body)) { // 有函数体就在开始插入埋点代码
-                      value.body.body.push(ast.program.body[0]);
-                    }
-                  } else if (types.isBlockStatement(value)) {
-                    // 2. onValuesChange() {}
-                    const ast = parser.parse(
-                      getInsertCode(state.file.opts.filename), // TODO 这里之后改成读 state.file.opts.filename
-                    );
-                    if (types.isBlockStatement(value)) { // 有函数体就在开始插入埋点代码
-                      value.body.unshift(ast.program.body[0]);
-                    }
-                  } else if (types.isIdentifier(value)) {
-                    // 3. onValuesChange: onValuesChangeFunc 这三种写法
-                    // 对于函数变量写法，替换函数节点为新的函数节点，并插入代码
-                    const code = `
-                      function ${value.name}${generateRandomVariableName()}(props, changedValues, allValues) {
-                        ${getInsertCode(state.file.opts.filename)}
-                        ${value.name}(props, changedValues, allValues);
-                      }
-                    `;
-                    const ast = parser.parse(code);
-                    [onValuesChangeProperty.value] = ast.program.body;
-                  }
+                // 如果声明了 onValuesChange函数，在原有的onValuesChange上注入代码
+                if (onValuesChangeProperty) {
+                  processOnValuesChangeFunction(onValuesChangeProperty, state);
                 } else {
-                  // 直接注入 onValuesChange 函数
+                  // 没有声明，直接注入 onValuesChange 函数
                   const code = `
                     function onValuesChange(props, changedValues, allValues) {
                       ${getInsertCode(state.file.opts.filename)}

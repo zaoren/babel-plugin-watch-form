@@ -3,7 +3,7 @@ export default Form.create({
     if (!window.WATCH_FORM_DATA_EXTENTIONS) {
       window.WATCH_FORM_DATA_EXTENTIONS = {};
     } else {
-      window.WATCH_FORM_DATA_EXTENTIONS['JDJOCUkF'] = allValues;
+      window.WATCH_FORM_DATA_EXTENTIONS['nQLgJUia'] = allValues;
     }
   }
 })(WhiteListModal);
