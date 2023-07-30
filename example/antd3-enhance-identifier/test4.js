@@ -1,6 +1,7 @@
+const onValuesChange = (a, b, c) => {
+  
+}
 
 export default Form.create({
-  onValuesChange(props, changedValues, allValues) {
-
-  },
+  onValuesChange: onValuesChange,
 })(WhiteListModal);

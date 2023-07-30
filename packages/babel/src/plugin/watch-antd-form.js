@@ -118,7 +118,7 @@ function processOnValuesChangeFunction(onValuesChangeProperty, state) {
       value.body.unshift(ast.program.body[0]);
     }
   } else if (types.isIdentifier(value)) {
-    // 3. onValuesChange: onValuesChangeFunc 
+    // 3. onValuesChange () {} 
     // 对于函数变量写法，替换函数节点为新的函数节点，并插入代码
     const code = `
       function ${value.name}${generateRandomVariableName()}(props, changedValues, allValues) {

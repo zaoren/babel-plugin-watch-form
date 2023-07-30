@@ -84,7 +84,7 @@ function compileFilesInDirectory(directoryPath) {
   });
 }
 
-const targetDirectories = ['./example/antd4-hooks'];
+const targetDirectories = ['./example'];
 
 targetDirectories.forEach((directoryPath) => {
   compileFilesInDirectory(directoryPath);
