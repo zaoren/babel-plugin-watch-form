@@ -10,7 +10,10 @@ function compileFile(filePath) {
 
   const ast = parser.parse(sourceCode, {
     sourceType: 'unambiguous',
-    plugins: ['jsx']
+    plugins: [
+      'decorators',
+      'jsx'
+    ]
   });
 
   const { code } = transformFromAstSync(ast, sourceCode, {
@@ -50,7 +53,8 @@ function compileFilesInDirectory(directoryPath) {
 }
 
 const exampleDir = './example';
-const targetDirectories = ['antd3-enhance-arrow', 'antd3-enhance-identifier', 'antd3-enhance-statement'];
+// const targetDirectories = ['antd3-enhance-arrow', 'antd3-enhance-identifier', 'antd3-enhance-statement', 'antd3-enhance-decorator'];
+const targetDirectories = ['antd3-enhance-decorator'];
 
 targetDirectories.forEach((directory) => {
   const directoryPath = path.join(exampleDir, directory);

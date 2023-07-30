@@ -1,1 +1,0 @@
-export default Form.create()(WhiteListModal);

@@ -28,7 +28,6 @@ function generateRandomVariableName() {
   const timestamp = Date.now();
   const randomSuffix = Math.random().toString(36).substring(2, 8);
   const uniqueVariableName = `var_${timestamp}_${randomSuffix}`;
-  console.log('uniqueVariableName', uniqueVariableName);
   return uniqueVariableName;
 }
 
