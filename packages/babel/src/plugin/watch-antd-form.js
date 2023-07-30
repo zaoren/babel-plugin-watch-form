@@ -106,7 +106,7 @@ function processOnValuesChangeFunction(onValuesChangeProperty, state) {
     // 这个时候需要有一个标识名来标识Form
     const ast = parser.parse(getInsertCodeWithoutArguments(state.file.opts.filename,
       value.params.length >= 3 ? value.params[2].name : `${uniquePrefix}allValues`));
-    if (types.isBlockStatement(value.body)) { // 有函数体就在开始插入埋点代码
+    if (types.isBlockStatement(value.body)) { // 有函数体就在开始插入监控代码
       value.body.body.push(ast.program.body[0]);
     }
   } else if (types.isBlockStatement(value)) {
@@ -114,7 +114,7 @@ function processOnValuesChangeFunction(onValuesChangeProperty, state) {
     const ast = parser.parse(
       getInsertCode(state.file.opts.filename), // TODO 这里之后改成读 state.file.opts.filename
     );
-    if (types.isBlockStatement(value)) { // 有函数体就在开始插入埋点代码
+    if (types.isBlockStatement(value)) { // 有函数体就在开始插入监控代码
       value.body.unshift(ast.program.body[0]);
     }
   } else if (types.isIdentifier(value)) {
@@ -243,16 +243,84 @@ const watchAntdFormPlugin = declare((api, options, dirname) => {
       },
       JSXOpeningElement(path, state) {
         if (![4, 5].includes(state.antdMajorVersion)) {
-          return
+          return;
         }
         // 对Form的jsx attributes进行操作
-        if (path.get('name') === 'Form') {
+        if (path.get('name').isJSXIdentifier({ name: 'Form' })) {
           const attributes = path.get('attributes');
-          // 看看是否有 onValuesChange 属性，有的话，改造，没有话直接添加
-          if (attributes.some(attribute => attribute.get('name') === 'onValuesChange')) {
-            // TODO 改造属性
+          // 看看是否有 onValuesChange 属性，有的话，改造，没有的话直接添加
+          const onValuesChangeAttribute = attributes.find(
+            (attribute) =>
+              attribute.get('name').isJSXIdentifier({ name: 'onValuesChange' })
+          );
+      
+          if (onValuesChangeAttribute) {
+            // 改造 onValuesChange 属性
+            const onValuesChangeExpression = onValuesChangeAttribute.get('value.expression');
+            if (onValuesChangeExpression.isArrowFunctionExpression()) {
+              const { params, body } = onValuesChangeExpression.node;
+              const uniquePrefix = generateRandomVariableName();
+              // 构建 props 参数节点
+              const propsParam = types.identifier(`${uniquePrefix}props`);
+              // 构建 changedValues 参数节点
+              const changedValuesParam = types.identifier(`${uniquePrefix}changedValues`);
+              // 构建 allValues 参数节点
+              const allValuesParam = types.identifier(`${uniquePrefix}allValues`);
+              if (params.length === 0) {
+                // 将参数节点插入到参数列表的结尾
+                params.push(propsParam, changedValuesParam, allValuesParam);
+              } else if (params.length === 1) {
+                // 将参数节点插入到参数列表的结尾
+                params.push(changedValuesParam, allValuesParam);
+              } else if (params.length === 2) {
+                // 构建 allValues 参数节点
+                params.push(allValuesParam);
+              }
+              // 这个时候需要有一个标识名来标识Form
+              const ast = parser.parse(
+                getInsertCodeWithoutArguments(
+                  state.file.opts.filename,
+                  params.length >= 3 ? params[2].name : `${uniquePrefix}allValues`
+                )
+              );
+              if (body.type === 'BlockStatement') {
+                // 有函数体就在开始插入监控代码
+                body.body.unshift(ast.program.body[0]);
+              }
+            } else if (onValuesChangeExpression.isIdentifier()) {
+              // 处理函数变量写法 onValuesChange: onValuesChangeFunc
+              const code = `
+                function ${onValuesChangeExpression.node.name}${generateRandomVariableName()}(props, changedValues, allValues) {
+                  ${getInsertCode(state.file.opts.filename)}
+                  ${onValuesChangeExpression.node.name}(props, changedValues, allValues);
+                }
+              `;
+              const ast = parser.parse(code);
+              [onValuesChangeExpression.node] = ast.program.body;
+            }
           } else {
-            // TODO 直接添加 onValuesChange 属性
+            // 没有声明 onValuesChange，直接添加属性
+            const onValuesChangeCode = `
+              function onValuesChange(props, changedValues, allValues) {
+                ${getInsertCode(state.file.opts.filename)}
+              }
+            `;
+            const onValuesChangeAst = parser.parse(onValuesChangeCode);
+      
+            const onValuesChangeAttribute = types.jsxAttribute(
+              types.jsxIdentifier('onValuesChange'),
+              types.jsxExpressionContainer(
+                types.functionExpression(
+                  types.identifier('onValuesChange'),
+                  onValuesChangeAst.program.body[0].params,
+                  onValuesChangeAst.program.body[0].body
+                )
+              )
+            );
+      
+            // attributes.push(onValuesChangeAttribute);
+            // 将新的属性添加到 JSX Opening Element 的 attributes 属性中
+             path.pushContainer('attributes', onValuesChangeAttribute);
           }
         }
       }
