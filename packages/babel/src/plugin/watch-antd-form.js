@@ -289,31 +289,40 @@ const watchAntdFormPlugin = declare((api, options, dirname) => {
               }
             } else if (onValuesChangeExpression.isIdentifier()) {
               // 处理函数变量写法 onValuesChange: onValuesChangeFunc
-              const code = `
-                function ${onValuesChangeExpression.node.name}${generateRandomVariableName()}(props, changedValues, allValues) {
-                  ${getInsertCode(state.file.opts.filename)}
-                  ${onValuesChangeExpression.node.name}(props, changedValues, allValues);
-                }
-              `;
-              const ast = parser.parse(code);
-              [onValuesChangeExpression.node] = ast.program.body;
+              const onValuesChangeName = onValuesChangeExpression.node.name;
+              const uniquePrefix = generateRandomVariableName();
+              const propsParam = types.identifier(`${uniquePrefix}props`);
+              const changedValuesParam = types.identifier(`${uniquePrefix}changedValues`);
+              const allValuesParam = types.identifier(`${uniquePrefix}allValues`);
+              const ast = parser.parse(
+                getInsertCodeWithoutArguments(state.file.opts.filename, `${uniquePrefix}allValues`)
+              );
+              const newExpression = types.arrowFunctionExpression(
+                [propsParam, changedValuesParam, allValuesParam],
+                types.blockStatement([
+                  ...ast.program.body,
+                  types.expressionStatement(
+                    types.callExpression(types.identifier(onValuesChangeName), [propsParam, changedValuesParam, allValuesParam])
+                  )
+                ])
+              );
+              onValuesChangeAttribute.get('value').replaceWith(types.jsxExpressionContainer(newExpression));
             }
           } else {
+            const ast = parser.parse(
+              getInsertCodeWithoutArguments(state.file.opts.filename, `allValues`)
+            );
             // 没有声明 onValuesChange，直接添加属性
-            const onValuesChangeCode = `
-              function onValuesChange(props, changedValues, allValues) {
-                ${getInsertCode(state.file.opts.filename)}
-              }
-            `;
-            const onValuesChangeAst = parser.parse(onValuesChangeCode);
-      
             const onValuesChangeAttribute = types.jsxAttribute(
               types.jsxIdentifier('onValuesChange'),
               types.jsxExpressionContainer(
-                types.functionExpression(
-                  types.identifier('onValuesChange'),
-                  onValuesChangeAst.program.body[0].params,
-                  onValuesChangeAst.program.body[0].body
+                types.arrowFunctionExpression(
+                  [
+                    types.identifier("props"),
+                    types.identifier("changedValues"),
+                    types.identifier("allValues"),
+                  ],
+                  types.blockStatement([ast.program.body[0]]),
                 )
               )
             );
