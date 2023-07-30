@@ -10,7 +10,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "antd": "^3.26.3"
+    "antd": "^4.26.3"
   },
   "keywords": [],
   "author": "",

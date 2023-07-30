@@ -12,7 +12,8 @@ function compileFile(filePath) {
     sourceType: 'unambiguous',
     plugins: [
       'decorators',
-      'jsx'
+      'jsx',
+      'typescript'
     ]
   });
 
@@ -83,7 +84,7 @@ function compileFilesInDirectory(directoryPath) {
   });
 }
 
-const targetDirectories = ['./example'];
+const targetDirectories = ['./example/antd4-hooks'];
 
 targetDirectories.forEach((directoryPath) => {
   compileFilesInDirectory(directoryPath);

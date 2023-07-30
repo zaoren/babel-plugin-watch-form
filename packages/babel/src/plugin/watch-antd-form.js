@@ -165,91 +165,97 @@ const watchAntdFormPlugin = declare((api, options, dirname) => {
         },
       },
       CallExpression(path, state) {
+        if (state.antdMajorVersion !== 3) {
+          return;
+        }
         // Form.create
         const callee = path.get('callee');
         const calleeStr = path.get('callee').toString();
 
-        switch (state.antdMajorVersion) {
-          case 3:
-            if (callee.isMemberExpression() && calleeStr === 'Form.create') {
-              // 处理Form.create(), 没有任何参数的情况
-              if (path.node.arguments.length === 0) {
-                const onValuesChangeCode = `
-                  function onValuesChange(props, changedValues, allValues) {
-                    ${getInsertCode(state.file.opts.filename)}
-                  }
-                `;
-                const onValuesChangeAst = parser.parse(onValuesChangeCode);
-
-                const onValuesChangeProperty = types.objectProperty(
-                  types.identifier('onValuesChange'),
-                  types.functionExpression(
-                    types.identifier('onValuesChange'),
-                    onValuesChangeAst.program.body[0].params,
-                    onValuesChangeAst.program.body[0].body
-                  )
-                );
-
-                path.node.arguments = [
-                  types.objectExpression([onValuesChangeProperty])
-                ];
-              } else {
-                // options 指的是 Form.create 的第一个参数
-                // Form.create({})，我们主要处理的是其中的第一个参数
-                const [ options ] = path.node.arguments;
-
-                const getOnValuesChangeValue = (options) => {
-                  if (!options) {
-                    return false;
-                  } if (types.isObjectExpression(options)) {
-                    const { properties } = options;
-                    for (const property of properties) {
-                      if ((types.isObjectProperty(property) || types.isObjectMethod(property))
-                        && types.isIdentifier(property.key, { name: 'onValuesChange' })
-                      ) {
-                        return property;
-                      }
-                      return false;
-                    }
-                  } else {
-                    return false;
-                  }
-                };
-
-                const onValuesChangeProperty = getOnValuesChangeValue(options);
-                // 如果声明了 onValuesChange函数，在原有的onValuesChange上注入代码
-                if (onValuesChangeProperty) {
-                  processOnValuesChangeFunction(onValuesChangeProperty, state);
-                } else {
-                  // 没有声明，直接注入 onValuesChange 函数
-                  const code = `
-                    function onValuesChange(props, changedValues, allValues) {
-                      ${getInsertCode(state.file.opts.filename)}
-                    }
-                  `;
-                  const ast = parser.parse(code);
-                  const properties = [
-                    types.objectProperty(
-                      types.identifier('onValuesChange'),
-                      types.functionExpression(null, ast.program.body[0].params, ast.program.body[0].body),
-                    ),
-                  ];
-                  options.properties.push(...properties);
-                }
+        if (callee.isMemberExpression() && calleeStr === 'Form.create') {
+          // 处理Form.create(), 没有任何参数的情况
+          if (path.node.arguments.length === 0) {
+            const onValuesChangeCode = `
+              function onValuesChange(props, changedValues, allValues) {
+                ${getInsertCode(state.file.opts.filename)}
               }
+            `;
+            const onValuesChangeAst = parser.parse(onValuesChangeCode);
 
+            const onValuesChangeProperty = types.objectProperty(
+              types.identifier('onValuesChange'),
+              types.functionExpression(
+                types.identifier('onValuesChange'),
+                onValuesChangeAst.program.body[0].params,
+                onValuesChangeAst.program.body[0].body
+              )
+            );
+
+            path.node.arguments = [
+              types.objectExpression([onValuesChangeProperty])
+            ];
+          } else {
+            // options 指的是 Form.create 的第一个参数
+            // Form.create({})，我们主要处理的是其中的第一个参数
+            const [ options ] = path.node.arguments;
+
+            const getOnValuesChangeValue = (options) => {
+              if (!options) {
+                return false;
+              } if (types.isObjectExpression(options)) {
+                const { properties } = options;
+                for (const property of properties) {
+                  if ((types.isObjectProperty(property) || types.isObjectMethod(property))
+                    && types.isIdentifier(property.key, { name: 'onValuesChange' })
+                  ) {
+                    return property;
+                  }
+                  return false;
+                }
+              } else {
+                return false;
+              }
+            };
+
+            const onValuesChangeProperty = getOnValuesChangeValue(options);
+            // 如果声明了 onValuesChange函数，在原有的onValuesChange上注入代码
+            if (onValuesChangeProperty) {
+              processOnValuesChangeFunction(onValuesChangeProperty, state);
+            } else {
+              // 没有声明，直接注入 onValuesChange 函数
+              const code = `
+                function onValuesChange(props, changedValues, allValues) {
+                  ${getInsertCode(state.file.opts.filename)}
+                }
+              `;
+              const ast = parser.parse(code);
+              const properties = [
+                types.objectProperty(
+                  types.identifier('onValuesChange'),
+                  types.functionExpression(null, ast.program.body[0].params, ast.program.body[0].body),
+                ),
+              ];
+              options.properties.push(...properties);
             }
-            break;
-          case 4: {
-            break;
           }
-          case 5: {
-            break;
-          }
-          default:
-            break;
+
         }
       },
+      JSXOpeningElement(path, state) {
+        if (![4, 5].includes(state.antdMajorVersion)) {
+          return
+        }
+        // 对Form的jsx attributes进行操作
+        if (path.get('name') === 'Form') {
+          const attributes = path.get('attributes');
+          // 看看是否有 onValuesChange 属性，有的话，改造，没有话直接添加
+          if (attributes.some(attribute => attribute.get('name') === 'onValuesChange')) {
+            // TODO 改造属性
+          } else {
+            // TODO 直接添加 onValuesChange 属性
+          }
+        }
+      }
     },
   };
 });
