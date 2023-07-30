@@ -1,8 +1,8 @@
+const fs = require('fs');
+const path = require('path');
 const { transformFromAstSync } = require('@babel/core');
 const parser = require('@babel/parser');
 const watchAntdForm = require('./plugin/watch-antd-form');
-const fs = require('fs');
-const path = require('path');
 
 function compileFile(filePath) {
   const sourceCode = fs.readFileSync(filePath, 'utf-8');
@@ -12,12 +12,12 @@ function compileFile(filePath) {
     plugins: [
       'decorators',
       'jsx',
-      'typescript'
-    ]
+      'typescript',
+    ],
   });
 
   const { code } = transformFromAstSync(ast, sourceCode, {
-    plugins: [watchAntdForm]
+    plugins: [watchAntdForm],
   });
 
   const distDir = './dist';
@@ -37,7 +37,6 @@ function compileFile(filePath) {
 
   fs.writeFileSync(distFilePath, code);
 }
-
 
 function compileFilesInDirectory(directoryPath) {
   const files = fs.readdirSync(directoryPath);
@@ -59,5 +58,3 @@ const targetDirectories = ['./example'];
 targetDirectories.forEach((directoryPath) => {
   compileFilesInDirectory(directoryPath);
 });
-
-export {};
