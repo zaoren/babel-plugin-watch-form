@@ -6,6 +6,8 @@ const parser = require('@babel/parser');
 const { declare } = require('@babel/helper-plugin-utils');
 const types = require('@babel/types');
 const template = require('@babel/template').default;
+const { v4: uuidv4 } = require('uuid');
+
 
 // 获取某个包的主版本
 function getMajorVersion(packageName) {
@@ -22,16 +24,12 @@ function getMajorVersion(packageName) {
   return '';
 }
 
-function generateRandomVariableName(length = 8) {
-  const characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
-  let variableName = '';
-
-  for (let i = 0; i < length; i++) {
-    const randomIndex = Math.floor(Math.random() * characters.length);
-    variableName += characters[randomIndex];
-  }
-
-  return variableName;
+function generateRandomVariableName() {
+  const timestamp = Date.now();
+  const randomSuffix = Math.random().toString(36).substring(2, 8);
+  const uniqueVariableName = `var_${timestamp}_${randomSuffix}`;
+  console.log('uniqueVariableName', uniqueVariableName);
+  return uniqueVariableName;
 }
 
 function convertToCamelCase(name) {
@@ -46,16 +44,6 @@ function convertToCamelCase(name) {
   return capitalizedWords.join('');
 }
 
-// function generateUUID() {
-//   const uuidTemplate = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx';
-//   const timestamp = new Date().getTime().toString(16);
-
-//   return uuidTemplate.replace(/[xy]/g, (c) => {
-//     const r = Math.random() * 16 | 0;
-//     const v = c === 'x' ? r : (r & 0x3 | 0x8);
-//     return v.toString(16);
-//   }).replace('y', timestamp);
-// }
 
 const getInsertCode = (filePath) => {
   let key = generateRandomVariableName();
