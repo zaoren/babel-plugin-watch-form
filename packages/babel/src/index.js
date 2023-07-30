@@ -52,11 +52,39 @@ function compileFilesInDirectory(directoryPath) {
   });
 }
 
-const exampleDir = './example';
-// const targetDirectories = ['antd3-enhance-arrow', 'antd3-enhance-identifier', 'antd3-enhance-statement', 'antd3-enhance-decorator'];
-const targetDirectories = ['antd3-enhance-decorator'];
+function compileFilesInDirectory(directoryPath) {
+  const files = fs.readdirSync(directoryPath);
 
-targetDirectories.forEach((directory) => {
-  const directoryPath = path.join(exampleDir, directory);
+  files.forEach((file) => {
+    const filePath = path.join(directoryPath, file);
+    const stats = fs.statSync(filePath);
+
+    if (stats.isFile()) {
+      compileFile(filePath);
+    } else if (stats.isDirectory()) {
+      compileFilesInDirectory(filePath); // 递归处理子目录
+    }
+  });
+}
+
+
+function compileFilesInDirectory(directoryPath) {
+  const files = fs.readdirSync(directoryPath);
+
+  files.forEach((file) => {
+    const filePath = path.join(directoryPath, file);
+    const stats = fs.statSync(filePath);
+
+    if (stats.isFile()) {
+      compileFile(filePath);
+    } else if (stats.isDirectory()) {
+      compileFilesInDirectory(filePath); // 递归处理子目录
+    }
+  });
+}
+
+const targetDirectories = ['./example'];
+
+targetDirectories.forEach((directoryPath) => {
   compileFilesInDirectory(directoryPath);
 });
