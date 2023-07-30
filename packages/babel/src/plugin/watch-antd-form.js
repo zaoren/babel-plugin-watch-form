@@ -6,7 +6,6 @@ const parser = require('@babel/parser');
 const { declare } = require('@babel/helper-plugin-utils');
 const types = require('@babel/types');
 const template = require('@babel/template').default;
-const { v4: uuidv4 } = require('uuid');
 
 
 // 获取某个包的主版本
@@ -77,6 +76,7 @@ const getInsertCodeWithoutArguments = (filePath, allValuesKey) => {
 // 2. onValuesChange() {}  (普通函数)
 // 3. onValuesChange: onValuesChangeFunc (函数变量)
 function processOnValuesChangeFunction(onValuesChangeProperty, state) {
+  let value
   if (types.isObjectMethod(onValuesChangeProperty)) {
     value = onValuesChangeProperty.body;
   } else if (types.isObjectProperty(onValuesChangeProperty)) {
@@ -197,7 +197,7 @@ const watchAntdFormPlugin = declare((api, options, dirname) => {
           } else {
             // options 指的是 Form.create 的第一个参数
             // Form.create({})，我们主要处理的是其中的第一个参数
-            const [ options ] = path.node.arguments;
+            const [options] = path.node.arguments;
 
             const getOnValuesChangeValue = (options) => {
               if (!options) {
@@ -253,7 +253,7 @@ const watchAntdFormPlugin = declare((api, options, dirname) => {
             (attribute) =>
               attribute.get('name').isJSXIdentifier({ name: 'onValuesChange' })
           );
-      
+
           if (onValuesChangeAttribute) {
             // 改造 onValuesChange 属性
             const onValuesChangeExpression = onValuesChangeAttribute.get('value.expression');
@@ -326,10 +326,10 @@ const watchAntdFormPlugin = declare((api, options, dirname) => {
                 )
               )
             );
-      
+
             // attributes.push(onValuesChangeAttribute);
             // 将新的属性添加到 JSX Opening Element 的 attributes 属性中
-             path.pushContainer('attributes', onValuesChangeAttribute);
+            path.pushContainer('attributes', onValuesChangeAttribute);
           }
         }
       }

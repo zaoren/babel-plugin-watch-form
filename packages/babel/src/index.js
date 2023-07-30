@@ -1,6 +1,5 @@
 const { transformFromAstSync } = require('@babel/core');
 const parser = require('@babel/parser');
-// const autoExportForm = require('./plugin/auto-export-form');
 const watchAntdForm = require('./plugin/watch-antd-form');
 const fs = require('fs');
 const path = require('path');
@@ -49,35 +48,6 @@ function compileFilesInDirectory(directoryPath) {
 
     if (stats.isFile()) {
       compileFile(filePath);
-    }
-  });
-}
-
-function compileFilesInDirectory(directoryPath) {
-  const files = fs.readdirSync(directoryPath);
-
-  files.forEach((file) => {
-    const filePath = path.join(directoryPath, file);
-    const stats = fs.statSync(filePath);
-
-    if (stats.isFile()) {
-      compileFile(filePath);
-    } else if (stats.isDirectory()) {
-      compileFilesInDirectory(filePath); // 递归处理子目录
-    }
-  });
-}
-
-
-function compileFilesInDirectory(directoryPath) {
-  const files = fs.readdirSync(directoryPath);
-
-  files.forEach((file) => {
-    const filePath = path.join(directoryPath, file);
-    const stats = fs.statSync(filePath);
-
-    if (stats.isFile()) {
-      compileFile(filePath);
     } else if (stats.isDirectory()) {
       compileFilesInDirectory(filePath); // 递归处理子目录
     }
@@ -89,3 +59,5 @@ const targetDirectories = ['./example'];
 targetDirectories.forEach((directoryPath) => {
   compileFilesInDirectory(directoryPath);
 });
+
+export {};
