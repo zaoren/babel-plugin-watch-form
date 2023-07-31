@@ -2,6 +2,8 @@
 const path = require('path');
 const { createRequire } = require('module');
 const semver = require('semver');
+const types = require('@babel/types');
+const parser = require('@babel/parser');
 
 // 获取某个包的主版本
 function getMajorVersion(packageName) {
@@ -37,7 +39,7 @@ function convertToCamelCase(name) {
   return capitalizedWords.join('');
 }
 
-const getInsertCode = (filePath) => {
+const getInsertCode = (filePath, version) => {
   let key = generateRandomVariableName();
   if (filePath) {
     const [dirName, fileName] = filePath.split('/').slice(-2);
@@ -47,7 +49,7 @@ const getInsertCode = (filePath) => {
   return `if (!window.WATCH_FORM_DATA_EXTENTIONS) {
     window.WATCH_FORM_DATA_EXTENTIONS = {};
   } else {
-    window.WATCH_FORM_DATA_EXTENTIONS['${convertToCamelCase(key)}'] = arguments[2];
+    window.WATCH_FORM_DATA_EXTENTIONS['${convertToCamelCase(key)}'] = arguments[${version === '3' ? 2 : 1}];
   }`;
 };
 
@@ -123,6 +125,7 @@ function processOnValuesChangeFunction(onValuesChangeProperty, state) {
       }
     `;
     const ast = parser.parse(code);
+    // eslint-disable-next-line no-param-reassign
     [onValuesChangeProperty.value] = ast.program.body;
   }
 }

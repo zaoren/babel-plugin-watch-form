@@ -57,7 +57,7 @@ const watchAntdFormPlugin = declare((api) => {
           if (path.node.arguments.length === 0) {
             const onValuesChangeCode = `
               function onValuesChange(props, changedValues, allValues) {
-                ${getInsertCode(state.file.opts.filename)}
+                ${getInsertCode(state.file.opts.filename, '3')}
               }
             `;
             const onValuesChangeAst = parser.parse(onValuesChangeCode);
@@ -108,7 +108,7 @@ const watchAntdFormPlugin = declare((api) => {
               // 没有声明，直接注入 onValuesChange 函数
               const code = `
                 function onValuesChange(props, changedValues, allValues) {
-                  ${getInsertCode(state.file.opts.filename)}
+                  ${getInsertCode(state.file.opts.filename, '3')}
                 }
               `;
               const ast = parser.parse(code);
@@ -145,27 +145,23 @@ const watchAntdFormPlugin = declare((api) => {
             if (onValuesChangeExpression.isArrowFunctionExpression()) {
               const { params, body } = onValuesChangeExpression.node;
               const uniquePrefix = generateRandomVariableName();
-              // 构建 props 参数节点
-              const propsParam = types.identifier(`${uniquePrefix}props`);
               // 构建 changedValues 参数节点
               const changedValuesParam = types.identifier(`${uniquePrefix}changedValues`);
               // 构建 allValues 参数节点
               const allValuesParam = types.identifier(`${uniquePrefix}allValues`);
+              // 注意 antd4.0开始只有 changedValues 和 allValues两个参数
               if (params.length === 0) {
                 // 将参数节点插入到参数列表的结尾
-                params.push(propsParam, changedValuesParam, allValuesParam);
+                params.push(changedValuesParam, allValuesParam);
               } else if (params.length === 1) {
                 // 将参数节点插入到参数列表的结尾
-                params.push(changedValuesParam, allValuesParam);
-              } else if (params.length === 2) {
-                // 构建 allValues 参数节点
                 params.push(allValuesParam);
               }
               // 这个时候需要有一个标识名来标识Form
               const ast = parser.parse(
                 getInsertCodeWithoutArguments(
                   state.file.opts.filename,
-                  params.length >= 3 ? params[2].name : `${uniquePrefix}allValues`,
+                  params.length >= 2 ? params[1].name : `${uniquePrefix}allValues`,
                 ),
               );
               if (body.type === 'BlockStatement') {
@@ -176,20 +172,19 @@ const watchAntdFormPlugin = declare((api) => {
               // 处理函数变量写法 onValuesChange: onValuesChangeFunc
               const onValuesChangeName = onValuesChangeExpression.node.name;
               const uniquePrefix = generateRandomVariableName();
-              const propsParam = types.identifier(`${uniquePrefix}props`);
-              const changedValuesParam = types.identifier(`${uniquePrefix}changedValues`);
-              const allValuesParam = types.identifier(`${uniquePrefix}allValues`);
+              const changedValuesParam = types.identifier('changedValues');
+              const allValuesParam = types.identifier('allValues');
               const ast = parser.parse(
                 getInsertCodeWithoutArguments(state.file.opts.filename, `${uniquePrefix}allValues`),
               );
               const newExpression = types.arrowFunctionExpression(
-                [propsParam, changedValuesParam, allValuesParam],
+                [changedValuesParam, allValuesParam],
                 types.blockStatement([
                   ...ast.program.body,
                   types.expressionStatement(
                     types.callExpression(
                       types.identifier(onValuesChangeName),
-                      [propsParam, changedValuesParam, allValuesParam],
+                      [changedValuesParam, allValuesParam],
                     ),
                   ),
                 ]),
@@ -206,7 +201,6 @@ const watchAntdFormPlugin = declare((api) => {
               types.jsxExpressionContainer(
                 types.arrowFunctionExpression(
                   [
-                    types.identifier('props'),
                     types.identifier('changedValues'),
                     types.identifier('allValues'),
                   ],

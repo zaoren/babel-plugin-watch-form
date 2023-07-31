@@ -2,7 +2,7 @@
   "configurations": [
     {
       "name": "调试",
-      "program": "${workspaceFolder}/packages/babel/src/index.ts",
+      "program": "${workspaceFolder}/packages/babel/src/index.js",
       "request": "launch",
       "skipFiles": [
         "<node_internals>/**"

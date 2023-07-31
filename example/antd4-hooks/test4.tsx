@@ -21,8 +21,8 @@ const Test = () => {
         left: '50%',
         marginTop: '20%',
       }}
-      onValuesChange={(props) => {
-        console.log('这是原来的逻辑', props);
+      onValuesChange={(changedValue) => {
+        console.log('这是原来的逻辑', changedValue);
       }}
     />
   );
