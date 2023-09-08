@@ -46,10 +46,10 @@ const getInsertCode = (filePath, version) => {
     const [name] = fileName.split('.');
     key = name !== 'index' ? name : dirName;
   }
-  return `if (!window.WATCH_FORM_DATA_EXTENTIONS) {
-    window.WATCH_FORM_DATA_EXTENTIONS = {};
+  return `if (!window.WATCH_FORM_DATA_EXTENSIONS) {
+    window.WATCH_FORM_DATA_EXTENSIONS = {};
   } else {
-    window.WATCH_FORM_DATA_EXTENTIONS['${convertToCamelCase(key)}'] = arguments[${version === '3' ? 2 : 1}];
+    window.WATCH_FORM_DATA_EXTENSIONS['${convertToCamelCase(key)}'] = arguments[${version === '3' ? 2 : 1}];
   }`;
 };
 
@@ -60,10 +60,10 @@ const getInsertCodeWithoutArguments = (filePath, allValuesKey) => {
     const [name] = fileName.split('.');
     key = name !== 'index' ? name : dirName;
   }
-  return `if (!window.WATCH_FORM_DATA_EXTENTIONS) {
-    window.WATCH_FORM_DATA_EXTENTIONS = {};
+  return `if (!window.WATCH_FORM_DATA_EXTENSIONS) {
+    window.WATCH_FORM_DATA_EXTENSIONS = {};
   } else {
-    window.WATCH_FORM_DATA_EXTENTIONS['${convertToCamelCase(key)}'] = ${allValuesKey};
+    window.WATCH_FORM_DATA_EXTENSIONS['${convertToCamelCase(key)}'] = ${allValuesKey};
   }`;
 };
 

@@ -21,7 +21,9 @@ const watchAntdFormPlugin = declare((api) => {
           // 在处理当前文件的时候，做两件事：
           //    1.读取Antd的Major版本(后续对于不同版本的Antd组件需要做不同的处理)
           //    2.提前判断一下是否有Import Form组件，如果没有，也不需要处理当前文件
-          state.antdMajorVersion = getMajorVersion('antd');
+          const { antdMajorVersion } = state.opts;
+
+          state.antdMajorVersion = antdMajorVersion || getMajorVersion('antd');
           if (!state.antdMajorVersion) {
             path.stop(); // 不存在antd版本，直接stop，不做额外的AST操作
           }
@@ -45,7 +47,7 @@ const watchAntdFormPlugin = declare((api) => {
         },
       },
       CallExpression(path, state) {
-        if (state.antdMajorVersion !== 3) {
+        if (state.antdMajorVersion != 3) {
           return;
         }
         // Form.create

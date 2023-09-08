@@ -2,7 +2,12 @@ const fs = require('fs');
 const path = require('path');
 const { transformFromAstSync } = require('@babel/core');
 const parser = require('@babel/parser');
+const minimist = require('minimist');
 const watchAntdForm = require('./plugin/watch-antd-form');
+
+const args = process.argv.slice(2);
+// 使用 minimist 解析参数
+const envArgs = minimist(args);
 
 function compileFile(filePath) {
   const sourceCode = fs.readFileSync(filePath, 'utf-8');
@@ -17,7 +22,13 @@ function compileFile(filePath) {
   });
 
   const { code } = transformFromAstSync(ast, sourceCode, {
-    plugins: [watchAntdForm],
+    plugins: [
+      [
+        watchAntdForm, {
+          antdMajorVersion: envArgs.antdMajorVersion
+        }
+      ]
+    ],
   });
 
   const distDir = './dist';
@@ -47,7 +58,7 @@ function compileFilesInDirectory(directoryPath) {
 
     if (stats.isFile()) {
       compileFile(filePath);
-    } else if (stats.isDirectory()) {
+    } else if (stats.isDirectory() && file.includes(`antd${envArgs.antdMajorVersion}`)) {
       compileFilesInDirectory(filePath); // 递归处理子目录
     }
   });

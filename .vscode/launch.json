@@ -1,6 +1,32 @@
 {
   "configurations": [
     {
+      "name": "调试antd3",
+      "request": "launch",
+      "runtimeArgs": [
+        "run-script",
+        "compile:plugin3"
+      ],
+      "runtimeExecutable": "npm",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "type": "node"
+    },
+    {
+      "name": "调试antd4",
+      "request": "launch",
+      "runtimeArgs": [
+        "run-script",
+        "compile:plugin4"
+      ],
+      "runtimeExecutable": "npm",
+      "skipFiles": [
+        "<node_internals>/**"
+      ],
+      "type": "node"
+    },
+    {
       "name": "调试",
       "program": "${workspaceFolder}/packages/babel/src/index.js",
       "request": "launch",
