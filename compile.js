@@ -1,3 +1,4 @@
+/* eslint-disable no-restricted-syntax */
 const fs = require('fs');
 const path = require('path');
 const ts = require('typescript');
@@ -36,7 +37,7 @@ function compileFile(inputFile, outputFile) {
   const emitResult = program.emit();
 
   const allDiagnostics = ts.getPreEmitDiagnostics(program).concat(emitResult.diagnostics);
-  allDiagnostics.forEach(diagnostic => {
+  allDiagnostics.forEach((diagnostic) => {
     if (diagnostic.file) {
       const { line, character } = diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start);
       const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
