@@ -39,7 +39,7 @@ function convertToCamelCase(name) {
   return capitalizedWords.join('');
 }
 
-const getInsertCode = (filePath, version) => {
+const getInsertExtensionsCode = (filePath, version) => {
   let key = generateRandomVariableName();
   if (filePath) {
     const [dirName, fileName] = filePath.split('/').slice(-2);
@@ -54,7 +54,7 @@ const getInsertCode = (filePath, version) => {
   }`;
 };
 
-const getInsertCodeWithoutArguments = (filePath, onChangedValuesKey, allValuesKey) => {
+const getInsertExtensionsCodeWithoutArguments = (filePath, onChangedValuesKey, allValuesKey) => {
   let key = generateRandomVariableName();
   if (filePath) {
     const [dirName, fileName] = filePath.split('/').slice(-2);
@@ -102,7 +102,7 @@ function processOnValuesChangeFunction(onValuesChangeProperty, state) {
       value.params.push(allValuesParam);
     }
     // 这个时候需要有一个标识名来标识Form
-    const ast = parser.parse(getInsertCodeWithoutArguments(
+    const ast = parser.parse(getInsertExtensionsCodeWithoutArguments(
       state.file.opts.filename,
       value.params.length >= 2 ? value.params[1].name : `${uniquePrefix}changedValues`,
       value.params.length >= 3 ? value.params[2].name : `${uniquePrefix}allValues`,
@@ -113,7 +113,7 @@ function processOnValuesChangeFunction(onValuesChangeProperty, state) {
   } else if (types.isBlockStatement(value)) {
     // 2. onValuesChange() {}
     const ast = parser.parse(
-      getInsertCode(state.file.opts.filename), // TODO 这里之后改成读 state.file.opts.filename
+      getInsertExtensionsCode(state.file.opts.filename), // TODO 这里之后改成读 state.file.opts.filename
     );
     if (types.isBlockStatement(value)) { // 有函数体就在开始插入监控代码
       value.body.unshift(ast.program.body[0]);
@@ -123,7 +123,7 @@ function processOnValuesChangeFunction(onValuesChangeProperty, state) {
     // 对于函数变量写法，替换函数节点为新的函数节点，并插入代码
     const code = `
       function ${value.name}${generateRandomVariableName()}(props, changedValues, allValues) {
-        ${getInsertCode(state.file.opts.filename)}
+        ${getInsertExtensionsCode(state.file.opts.filename)}
         ${value.name}(props, changedValues, allValues);
       }
     `;
@@ -137,7 +137,7 @@ module.exports = {
   getMajorVersion,
   generateRandomVariableName,
   convertToCamelCase,
-  getInsertCode,
-  getInsertCodeWithoutArguments,
+  getInsertExtensionsCode,
+  getInsertExtensionsCodeWithoutArguments,
   processOnValuesChangeFunction,
 };

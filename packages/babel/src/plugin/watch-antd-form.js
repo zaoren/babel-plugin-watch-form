@@ -6,8 +6,8 @@ const types = require('@babel/types');
 const {
   getMajorVersion,
   generateRandomVariableName,
-  getInsertCode,
-  getInsertCodeWithoutArguments,
+  getInsertExtensionsCode,
+  getInsertExtensionsCodeWithoutArguments,
   processOnValuesChangeFunction,
 } = require('../util/index');
 
@@ -64,7 +64,7 @@ const watchAntdFormPlugin = declare((api) => {
           if (path.node.arguments.length === 0) {
             const onValuesChangeCode = `
               function onValuesChange(props, changedValues, allValues) {
-                ${getInsertCode(state.file.opts.filename, '3')}
+                ${getInsertExtensionsCode(state.file.opts.filename, '3')}
               }
             `;
             const onValuesChangeAst = parser.parse(onValuesChangeCode);
@@ -115,7 +115,7 @@ const watchAntdFormPlugin = declare((api) => {
               // 没有声明，直接注入 onValuesChange 函数
               const code = `
                 function onValuesChange(props, changedValues, allValues) {
-                  ${getInsertCode(state.file.opts.filename, '3')}
+                  ${getInsertExtensionsCode(state.file.opts.filename, '3')}
                 }
               `;
               const ast = parser.parse(code);
@@ -166,7 +166,7 @@ const watchAntdFormPlugin = declare((api) => {
               }
               // 这个时候需要有一个标识名来标识Form
               const ast = parser.parse(
-                getInsertCodeWithoutArguments(
+                getInsertExtensionsCodeWithoutArguments(
                   state.file.opts.filename,
                   params.length >= 1 ? params[0].name : `${uniquePrefix}changedValues`,
                   params.length >= 2 ? params[1].name : `${uniquePrefix}allValues`,
@@ -183,7 +183,7 @@ const watchAntdFormPlugin = declare((api) => {
               const changedValuesParam = types.identifier('changedValues');
               const allValuesParam = types.identifier('allValues');
               const ast = parser.parse(
-                getInsertCodeWithoutArguments(state.file.opts.filename, `${uniquePrefix}changedValues`, `${uniquePrefix}allValues`),
+                getInsertExtensionsCodeWithoutArguments(state.file.opts.filename, `${uniquePrefix}changedValues`, `${uniquePrefix}allValues`),
               );
               const newExpression = types.arrowFunctionExpression(
                 [changedValuesParam, allValuesParam],
@@ -202,7 +202,7 @@ const watchAntdFormPlugin = declare((api) => {
           } else {
             // 没有声明 onValuesChange，直接添加属性
             const ast = parser.parse(
-              getInsertCodeWithoutArguments(state.file.opts.filename, 'onChangedValues', 'allValues'),
+              getInsertExtensionsCodeWithoutArguments(state.file.opts.filename, 'onChangedValues', 'allValues'),
             );
             const newOnValuesChangeAttribute = types.jsxAttribute(
               types.jsxIdentifier('onValuesChange'),
