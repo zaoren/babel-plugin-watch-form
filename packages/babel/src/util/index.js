@@ -49,11 +49,12 @@ const getInsertCode = (filePath, version) => {
   return `if (!window.WATCH_FORM_DATA_EXTENSIONS) {
     window.WATCH_FORM_DATA_EXTENSIONS = {};
   } else {
-    window.WATCH_FORM_DATA_EXTENSIONS['${convertToCamelCase(key)}'] = arguments[${version === '3' ? 2 : 1}];
+    window.WATCH_FORM_DATA_EXTENSIONS['changedValues_${convertToCamelCase(key)}'] = arguments[${version === '3' ? 1 : 0}]; 
+    window.WATCH_FORM_DATA_EXTENSIONS['allValues_${convertToCamelCase(key)}'] = arguments[${version === '3' ? 2 : 1}];
   }`;
 };
 
-const getInsertCodeWithoutArguments = (filePath, allValuesKey) => {
+const getInsertCodeWithoutArguments = (filePath, onChangedValuesKey, allValuesKey) => {
   let key = generateRandomVariableName();
   if (filePath) {
     const [dirName, fileName] = filePath.split('/').slice(-2);
@@ -63,7 +64,8 @@ const getInsertCodeWithoutArguments = (filePath, allValuesKey) => {
   return `if (!window.WATCH_FORM_DATA_EXTENSIONS) {
     window.WATCH_FORM_DATA_EXTENSIONS = {};
   } else {
-    window.WATCH_FORM_DATA_EXTENSIONS['${convertToCamelCase(key)}'] = ${allValuesKey};
+    window.WATCH_FORM_DATA_EXTENSIONS['changedValues_${convertToCamelCase(key)}'] = ${onChangedValuesKey};
+    window.WATCH_FORM_DATA_EXTENSIONS['allValues_${convertToCamelCase(key)}'] = ${allValuesKey};
   }`;
 };
 
@@ -102,6 +104,7 @@ function processOnValuesChangeFunction(onValuesChangeProperty, state) {
     // 这个时候需要有一个标识名来标识Form
     const ast = parser.parse(getInsertCodeWithoutArguments(
       state.file.opts.filename,
+      value.params.length >= 2 ? value.params[1].name : `${uniquePrefix}changedValues`,
       value.params.length >= 3 ? value.params[2].name : `${uniquePrefix}allValues`,
     ));
     if (types.isBlockStatement(value.body)) { // 有函数体就在开始插入监控代码

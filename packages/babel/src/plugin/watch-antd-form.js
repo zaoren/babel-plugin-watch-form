@@ -47,13 +47,18 @@ const watchAntdFormPlugin = declare((api) => {
         },
       },
       CallExpression(path, state) {
-        if (state.antdMajorVersion != 3) {
-          return;
-        }
         // Form.create
         const callee = path.get('callee');
         const calleeStr = path.get('callee').toString();
 
+        // 处理setFieldsValue和setFieldValue的调用
+        if (callee.isMemberExpression() && (calleeStr === 'setFieldsValue' || calleeStr === 'setFieldValue')) {
+          // TODO 在这里添加代码以触发onValuesChange函数
+        }
+
+        if (state.antdMajorVersion != 3) {
+          return;
+        }
         if (callee.isMemberExpression() && calleeStr === 'Form.create') {
           // 处理Form.create(), 没有任何参数的情况
           if (path.node.arguments.length === 0) {
@@ -91,7 +96,7 @@ const watchAntdFormPlugin = declare((api) => {
                 for (let i = 0; i < len; i += 1) {
                   const property = properties[i];
                   if ((types.isObjectProperty(property) || types.isObjectMethod(property))
-                  && types.isIdentifier(property.key, { name: 'onValuesChange' })
+                    && types.isIdentifier(property.key, { name: 'onValuesChange' })
                   ) {
                     return property;
                   }
@@ -163,6 +168,7 @@ const watchAntdFormPlugin = declare((api) => {
               const ast = parser.parse(
                 getInsertCodeWithoutArguments(
                   state.file.opts.filename,
+                  params.length >= 1 ? params[0].name : `${uniquePrefix}changedValues`,
                   params.length >= 2 ? params[1].name : `${uniquePrefix}allValues`,
                 ),
               );
@@ -177,7 +183,7 @@ const watchAntdFormPlugin = declare((api) => {
               const changedValuesParam = types.identifier('changedValues');
               const allValuesParam = types.identifier('allValues');
               const ast = parser.parse(
-                getInsertCodeWithoutArguments(state.file.opts.filename, `${uniquePrefix}allValues`),
+                getInsertCodeWithoutArguments(state.file.opts.filename, `${uniquePrefix}changedValues`, `${uniquePrefix}allValues`),
               );
               const newExpression = types.arrowFunctionExpression(
                 [changedValuesParam, allValuesParam],
@@ -194,10 +200,10 @@ const watchAntdFormPlugin = declare((api) => {
               onValuesChangeAttribute.get('value').replaceWith(types.jsxExpressionContainer(newExpression));
             }
           } else {
-            const ast = parser.parse(
-              getInsertCodeWithoutArguments(state.file.opts.filename, 'allValues'),
-            );
             // 没有声明 onValuesChange，直接添加属性
+            const ast = parser.parse(
+              getInsertCodeWithoutArguments(state.file.opts.filename, 'onChangedValues', 'allValues'),
+            );
             const newOnValuesChangeAttribute = types.jsxAttribute(
               types.jsxIdentifier('onValuesChange'),
               types.jsxExpressionContainer(
